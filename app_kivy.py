@@ -144,11 +144,20 @@ if st.session_state.stats:
         st.session_state.stats.pop()
         st.rerun()
 
+
 # --- Stats Table ---
 if st.session_state.stats:
     st.subheader("📊 Logged Stats")
     df = pd.DataFrame(st.session_state.stats, columns=["Player", "Action", "Time"])
-    st.dataframe(df, use_container_width=True)
+
+    # Detect if user is on mobile (basic user-agent check)
+    user_agent = st.request.headers.get("user-agent", "").lower() if hasattr(st, "request") else ""
+    is_mobile = any(x in user_agent for x in ["iphone", "ipad", "android"])
+
+    if is_mobile:
+        st.table(df)  # simpler, static version
+    else:
+        st.dataframe(df, use_container_width=True)  # interactive version
 
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button(
@@ -157,3 +166,4 @@ if st.session_state.stats:
         file_name="game_stats.csv",
         mime="text/csv",
     )
+

@@ -15,7 +15,7 @@ st.markdown("""
     div.stButton > button {
         font-size: 22px !important;
         height: 80px !important;
-        width: 120px !important;
+        width: 120px !important;  /* fixed width so many fit in a row */
         margin: 5px !important;
     }
     </style>
@@ -144,32 +144,21 @@ if st.session_state.stats:
         st.session_state.stats.pop()
         st.rerun()
 
+
 # --- Stats Table ---
 if st.session_state.stats:
     st.subheader("📊 Logged Stats")
     df = pd.DataFrame(st.session_state.stats, columns=["Player", "Action", "Time"])
 
-    # Detect if user is on mobile (iPad/iPhone/Android)
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-    from streamlit.web.server.websocket_headers import _get_websocket_headers
+    # Detect if user is on mobile (basic user-agent check)
+    user_agent = st.request.headers.get("user-agent", "").lower() if hasattr(st, "request") else ""
+    is_mobile = any(x in user_agent for x in ["iphone", "ipad", "android"])
 
-    def is_mobile():
-        try:
-            ctx = get_script_run_ctx()
-            if ctx is None:
-                return False
-            headers = _get_websocket_headers(ctx.session_id)
-            user_agent = headers.get("User-Agent", "").lower()
-            return any(x in user_agent for x in ["iphone", "ipad", "android"])
-        except Exception:
-            return False
-
-    if is_mobile():
-        st.table(df)   # ✅ static, safe for mobile
+    if is_mobile:
+        st.table(df)  # simpler, static version
     else:
-        st.dataframe(df, use_container_width=True)  # ✅ interactive on desktop
+        st.dataframe(df, use_container_width=True)  # interactive version
 
-    # --- CSV Download ---
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button(
         label="⬇️ Download Stats as CSV",
@@ -177,3 +166,4 @@ if st.session_state.stats:
         file_name="game_stats.csv",
         mime="text/csv",
     )
+

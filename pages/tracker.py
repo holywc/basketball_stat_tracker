@@ -3,6 +3,15 @@ import pandas as pd
 import time
 from streamlit_autorefresh import st_autorefresh
 
+
+
+
+# --- Require setup before access ---
+if "setup_done" not in st.session_state or not st.session_state.setup_done:
+    st.warning("⚠️ Please set up the roster first on the Home page.")
+    st.stop()
+
+
 # --- Wide layout + big buttons CSS ---
 st.markdown("""
     <style>
@@ -39,6 +48,7 @@ st.markdown("""
         height: 70px !important;
         width: 100% !important;
     }
+            
     
     </style>
     """, unsafe_allow_html=True)
@@ -57,10 +67,10 @@ buttons = [
 zones_2pt = [
     "Restricted Area",
     "In the Paint (Non-RA)",
-    "Left Short Mid-Range",
-    "Right Short Mid-Range",
-    "Left Long Mid-Range",
-    "Right Long Mid-Range",
+    "Left corner Mid-Range",
+    "Right corner Mid-Range",
+    "Left wing Mid-Range",
+    "Right wing Mid-Range",
     "Top of the Key Mid-Range"
 ]
 
@@ -96,25 +106,73 @@ if "elapsed" not in st.session_state:
 if st.session_state.pending_action:
     player, action, act_time = st.session_state.pending_action
 
-    # Three columns: left - center - right
-    col1, col2, col3 = st.columns([0,3,0])
-    with col2:
-        st.image("shot_chart.png", caption="Shot Chart", width=1700)
+    st.markdown(
+        f"""
+        <div class="zone-alert">
+            🏀 Select Zone for Player {player}<br>
+            <span style="font-size:20px;">Action: {action} at {act_time}</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Pick zones based on action
+    if action in ["2PT", "Miss2"]:
+        zone_list = zones_2pt
+    elif action in ["3PT", "Miss3"]:
+        zone_list = zones_3pt
+    else:
+        zone_list = []
+
+    # 3-column layout: left, middle, right
+    col_left, col_mid, col_right = st.columns([1,1,1])
+
+    for zone in zone_list:
+        # Decide which column
+        if "Left" in zone:
+            col = col_left
+        elif "Right" in zone:
+            col = col_right
+        else:  # "Top" or "Restricted Area" / "Paint" go in the middle
+            col = col_mid
+
+        # Render as big button
+        if col.button(zone, key=f"zone-{player}-{zone}"):
+            st.session_state.stats.append(
+                [player, f"{action} ({zone})", act_time, f"Q{st.session_state.quarter}"]
+            )
+            st.session_state.pending_action = None
+            st.rerun()
+
+    # Cancel button under the selector
+    if st.button("❌ Cancel"):
+        st.session_state.pending_action = None
+        st.rerun()
 
     st.stop()
 
 
 # --- Bench UI ---
 st.title('Bench')
+
+MAX_COLS = 7  # max players per row
+
 if st.session_state.players:
-    cols = st.columns(len(st.session_state.players))
-    for i, p in enumerate(st.session_state.players):
-        if cols[i].button(str(p), key=f"player-{p}"):
-            if len(st.session_state.starters) < 5:
-                st.session_state.starters.append(p)
-                st.session_state.players.remove(p)
-                st.session_state.stats.append([p, "SUB_IN", "0:00", f"Q{st.session_state.quarter}"])
-                st.rerun()
+    for row_start in range(0, len(st.session_state.players), MAX_COLS):
+        row_players = st.session_state.players[row_start:row_start+MAX_COLS]
+        
+        # Create a full row of MAX_COLS columns
+        cols = st.columns(MAX_COLS)
+        
+        # Fill only the left side with player buttons
+        for i, p in enumerate(row_players):
+            if cols[i].button(str(p), key=f"player-{p}"):
+                if len(st.session_state.starters) < 5:
+                    st.session_state.starters.append(p)
+                    st.session_state.players.remove(p)
+                    st.session_state.stats.append([p, "SUB_IN", "0:00", f"Q{st.session_state.quarter}"])
+                    st.rerun()
+
 
 # --- Quarter Logic ---
 st.title("📅 Game Quarter")

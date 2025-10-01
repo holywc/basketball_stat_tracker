@@ -99,7 +99,7 @@ if st.session_state.pending_action:
     # Three columns: left - center - right
     col1, col2, col3 = st.columns([1,3,1])
     with col2:
-        st.image("shot_chart.png", caption="Shot Chart", use_column_width=True)
+        st.image("shot_chart.png", caption="Shot Chart", width=1700)
 
     st.stop()
 

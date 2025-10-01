@@ -34,10 +34,41 @@ st.markdown("""
         0%, 100% { opacity: 1; }
         50% { opacity: 0.7; }
     }
-    .zone-button {
-        font-size: 20px !important;
-        height: 70px !important;
-        width: 100% !important;
+    /* Basketball court styling */
+    .court-container {
+        position: relative;
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #1a1a1a;
+        border-radius: 10px;
+    }
+    .court-svg {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+    .zone-button-overlay {
+        position: absolute;
+        cursor: pointer;
+        transition: all 0.3s;
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 2px solid #fff;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        font-size: 14px;
+        text-align: center;
+        padding: 5px;
+    }
+    .zone-button-overlay:hover {
+        background-color: rgba(255, 165, 0, 0.5);
+        transform: scale(1.05);
+        border-color: #ffa500;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -103,11 +134,56 @@ if st.session_state.pending_action:
         </div>
     """, unsafe_allow_html=True)
     
-    st.error("🚨 You must select a shot zone before continuing!")
+    st.error("🚨 Click on the court to select a shot zone!")
     
-    # Show zone selection prominently
+    # Show basketball court with interactive zones
     if action in ["2PT", "Miss2"]:
-        st.title("📍 SELECT 2-POINT ZONE:")
+        st.title("📍 SELECT 2-POINT ZONE ON COURT:")
+        
+        # Create basketball court SVG with clickable zones
+        court_html = """
+        <svg viewBox="0 0 500 470" style="width: 100%; max-width: 800px; margin: 0 auto; display: block; background: #d2691e;">
+            <!-- Court outline -->
+            <rect x="10" y="10" width="480" height="450" fill="#c76f3a" stroke="#fff" stroke-width="3"/>
+            
+            <!-- Three-point line -->
+            <path d="M 10 10 L 10 80 Q 250 200 490 80 L 490 10" fill="none" stroke="#fff" stroke-width="3"/>
+            
+            <!-- Paint / Key -->
+            <rect x="180" y="10" width="140" height="190" fill="rgba(139, 69, 19, 0.3)" stroke="#fff" stroke-width="3"/>
+            
+            <!-- Free throw circle -->
+            <circle cx="250" cy="150" r="60" fill="none" stroke="#fff" stroke-width="3"/>
+            
+            <!-- Restricted area (semi-circle) -->
+            <path d="M 210 10 Q 250 70 290 10" fill="rgba(255, 0, 0, 0.2)" stroke="#fff" stroke-width="2"/>
+            
+            <!-- Basket -->
+            <circle cx="250" cy="20" r="8" fill="orange" stroke="#000" stroke-width="2"/>
+            
+            <!-- Zone labels for 2PT -->
+            <text x="250" y="40" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Restricted</text>
+            <text x="250" y="120" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Paint (Non-RA)</text>
+            
+            <text x="100" y="150" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Left Short</text>
+            <text x="100" y="165" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Mid-Range</text>
+            
+            <text x="400" y="150" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Right Short</text>
+            <text x="400" y="165" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Mid-Range</text>
+            
+            <text x="100" y="280" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Left Long</text>
+            <text x="100" y="295" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Mid-Range</text>
+            
+            <text x="400" y="280" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Right Long</text>
+            <text x="400" y="295" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Mid-Range</text>
+            
+            <text x="250" y="280" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Top of Key</text>
+            <text x="250" y="295" fill="white" font-size="11" font-weight="bold" text-anchor="middle">Mid-Range</text>
+        </svg>
+        """
+        st.markdown(court_html, unsafe_allow_html=True)
+        
+        st.markdown("### Click a zone below:")
         cols = st.columns(3)
         for i, z in enumerate(zones_2pt):
             if cols[i % 3].button(f"✓ {z}", key=f"zone-{player}-{action}-{z}", use_container_width=True):
@@ -116,7 +192,45 @@ if st.session_state.pending_action:
                 st.rerun()
 
     elif action in ["3PT", "Miss3"]:
-        st.title("📍 SELECT 3-POINT ZONE:")
+        st.title("📍 SELECT 3-POINT ZONE ON COURT:")
+        
+        # Create basketball court SVG for 3PT zones
+        court_html = """
+        <svg viewBox="0 0 500 470" style="width: 100%; max-width: 800px; margin: 0 auto; display: block; background: #d2691e;">
+            <!-- Court outline -->
+            <rect x="10" y="10" width="480" height="450" fill="#c76f3a" stroke="#fff" stroke-width="3"/>
+            
+            <!-- Three-point line (highlighted) -->
+            <path d="M 10 10 L 10 80 Q 250 200 490 80 L 490 10" fill="none" stroke="#00ff00" stroke-width="5"/>
+            
+            <!-- Paint / Key -->
+            <rect x="180" y="10" width="140" height="190" fill="rgba(139, 69, 19, 0.3)" stroke="#fff" stroke-width="3"/>
+            
+            <!-- Free throw circle -->
+            <circle cx="250" cy="150" r="60" fill="none" stroke="#fff" stroke-width="3"/>
+            
+            <!-- Basket -->
+            <circle cx="250" cy="20" r="8" fill="orange" stroke="#000" stroke-width="2"/>
+            
+            <!-- Zone labels for 3PT -->
+            <text x="30" y="40" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Left</text>
+            <text x="30" y="55" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Corner 3</text>
+            
+            <text x="470" y="40" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Right</text>
+            <text x="470" y="55" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Corner 3</text>
+            
+            <text x="100" y="130" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Left</text>
+            <text x="100" y="145" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Wing 3</text>
+            
+            <text x="400" y="130" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Right</text>
+            <text x="400" y="145" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Wing 3</text>
+            
+            <text x="250" y="220" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Top of Arc 3</text>
+        </svg>
+        """
+        st.markdown(court_html, unsafe_allow_html=True)
+        
+        st.markdown("### Click a zone below:")
         cols = st.columns(3)
         for i, z in enumerate(zones_3pt):
             if cols[i % 3].button(f"✓ {z}", key=f"zone-{player}-{action}-{z}", use_container_width=True):

@@ -147,7 +147,7 @@ st.markdown(f"# ⏱ {minutes}:{seconds:02d}")
 # --- Stat Tracker ---
 st.title("🏀 Basketball Stat Tracker")
 
-BUTTONS_PER_ROW = 5  # adjust this for iPad friendliness
+BUTTONS_PER_ROW = 7  # adjust this for iPad friendliness
 
 for player in st.session_state.starters:
     st.markdown(f"### Player {player}")

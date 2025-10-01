@@ -3,7 +3,7 @@ import pandas as pd
 import time
 from streamlit_autorefresh import st_autorefresh
 
-# --- Wide layout + big buttons CSS ---
+# --- Wide layout + big buttons CSS + Modal CSS ---
 st.markdown("""
     <style>
     .main .block-container {
@@ -16,6 +16,51 @@ st.markdown("""
         height: 80px !important;
         width: 120px !important;
         margin: 5px !important;
+    }
+    /* Modal overlay */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 9998;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    /* Modal content */
+    .modal-content {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        z-index: 9999;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    .modal-header {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 1rem;
+        color: #1f1f1f;
+        text-align: center;
+    }
+    .modal-subheader {
+        font-size: 20px;
+        margin-bottom: 1.5rem;
+        color: #555;
+        text-align: center;
+    }
+    /* Zone button styling */
+    .zone-button-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        margin-top: 1rem;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -62,6 +107,48 @@ if "quarter" not in st.session_state:
     st.session_state.quarter = 1
 if "max_quarters" not in st.session_state:
     st.session_state.max_quarters = 4
+
+# --- MODAL POPUP FOR ZONE SELECTION ---
+if st.session_state.pending_action:
+    player, action, act_time = st.session_state.pending_action
+    
+    # Create modal overlay
+    st.markdown('<div class="modal-overlay"></div>', unsafe_allow_html=True)
+    
+    # Modal dialog using container
+    modal_container = st.container()
+    with modal_container:
+        st.markdown('<div class="modal-content">', unsafe_allow_html=True)
+        st.markdown(f'<div class="modal-header">🏀 SELECT SHOT ZONE</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="modal-subheader">Player {player} | {action} | {act_time}</div>', unsafe_allow_html=True)
+        
+        if action in ["2PT", "Miss2"]:
+            st.markdown("#### 2-Point Zones")
+            zone_cols = st.columns(3)
+            for i, z in enumerate(zones_2pt):
+                if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}", use_container_width=True):
+                    st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
+                    st.session_state.pending_action = None
+                    st.rerun()
+
+        elif action in ["3PT", "Miss3"]:
+            st.markdown("#### 3-Point Zones")
+            zone_cols = st.columns(3)
+            for i, z in enumerate(zones_3pt):
+                if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}", use_container_width=True):
+                    st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
+                    st.session_state.pending_action = None
+                    st.rerun()
+        
+        st.markdown("---")
+        if st.button("❌ Cancel", use_container_width=True):
+            st.session_state.pending_action = None
+            st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Stop rendering the rest of the page when modal is active
+    st.stop()
 
 # --- Bench UI ---
 st.title('Bench')
@@ -166,46 +253,17 @@ for player in st.session_state.starters:
                     st.session_state.stats.append([player, "SUB_OUT", current_game_time, f"Q{st.session_state.quarter}"])
                     st.rerun()
                 else:
-                    if b in ["2PT", "3PT", "FT", "Miss2", "Miss3", "MissFT"]:
+                    if b in ["2PT", "3PT", "Miss2", "Miss3"]:
+                        # Trigger modal for zone selection
                         st.session_state.pending_action = (player, b, current_game_time)
-                        st.info(f"Select zone for {b} by Player {player}" if b not in ["FT", "MissFT"] else f"Logged Free Throw for Player {player}")
-                        if b in ["FT", "MissFT"]:
-                            st.session_state.stats.append([player, b, current_game_time, f"Q{st.session_state.quarter}"])
-                            st.session_state.pending_action = None
-                            st.rerun()
+                        st.rerun()
+                    elif b in ["FT", "MissFT"]:
+                        # Free throws don't need zones
+                        st.session_state.stats.append([player, b, current_game_time, f"Q{st.session_state.quarter}"])
+                        st.rerun()
                     else:
                         st.session_state.stats.append([player, b, current_game_time, f"Q{st.session_state.quarter}"])
                         st.rerun()
-
-
-# --- Zone selection fallback (fake modal) ---
-if st.session_state.pending_action:
-    player, action, act_time = st.session_state.pending_action
-
-    st.markdown("## 📍 Select Shot Zone")
-    st.markdown(f"**Player {player} | {action} | {act_time}**")
-
-    if action in ["2PT", "Miss2"]:
-        zone_cols = st.columns(3)
-        for i, z in enumerate(zones_2pt):
-            if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}"):
-                st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
-                st.session_state.pending_action = None
-                st.rerun()
-
-    elif action in ["3PT", "Miss3"]:
-        zone_cols = st.columns(3)
-        for i, z in enumerate(zones_3pt):
-            if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}"):
-                st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
-                st.session_state.pending_action = None
-                st.rerun()
-
-    elif action in ["FT", "MissFT"]:
-        # Free throws don’t need zones
-        st.session_state.stats.append([player, action, act_time, f"Q{st.session_state.quarter}"])
-        st.session_state.pending_action = None
-        st.rerun()
 
 
 # --- Undo ---

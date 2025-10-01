@@ -94,9 +94,17 @@ if "elapsed" not in st.session_state:
 # --- CHECK IF ZONE SELECTION IS PENDING ---
 if st.session_state.pending_action:
     player, action, act_time = st.session_state.pending_action
-    
-    # Show prominent alert at the top
-    st.image("shot_chart.png", caption="Local Image", width=1800)
+
+    # Show prominent alert at the top with centered image
+    st.markdown(
+        f"""
+        <div style="display: flex; justify-content: center;">
+            <img src="shot_chart.png" width="900">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     st.stop()
 
 # --- Bench UI ---

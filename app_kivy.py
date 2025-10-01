@@ -3,7 +3,7 @@ import pandas as pd
 import time
 from streamlit_autorefresh import st_autorefresh
 
-# --- Wide layout + big buttons CSS + Modal CSS ---
+# --- Wide layout + big buttons CSS ---
 st.markdown("""
     <style>
     .main .block-container {
@@ -17,50 +17,27 @@ st.markdown("""
         width: 120px !important;
         margin: 5px !important;
     }
-    /* Modal overlay */
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
-        z-index: 9998;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-    /* Modal content */
-    .modal-content {
-        background-color: white;
+    /* Zone selection alert styling */
+    .zone-alert {
+        background-color: #ff4b4b;
+        color: white;
         padding: 2rem;
         border-radius: 10px;
-        max-width: 600px;
-        width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
-        z-index: 9999;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    }
-    .modal-header {
-        font-size: 28px;
+        text-align: center;
+        font-size: 24px;
         font-weight: bold;
-        margin-bottom: 1rem;
-        color: #1f1f1f;
-        text-align: center;
+        margin: 2rem 0;
+        border: 4px solid #ff0000;
+        animation: pulse 1.5s infinite;
     }
-    .modal-subheader {
-        font-size: 20px;
-        margin-bottom: 1.5rem;
-        color: #555;
-        text-align: center;
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
     }
-    /* Zone button styling */
-    .zone-button-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 10px;
-        margin-top: 1rem;
+    .zone-button {
+        font-size: 20px !important;
+        height: 70px !important;
+        width: 100% !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -107,47 +84,53 @@ if "quarter" not in st.session_state:
     st.session_state.quarter = 1
 if "max_quarters" not in st.session_state:
     st.session_state.max_quarters = 4
+if "clock_running" not in st.session_state:
+    st.session_state.clock_running = False
+if "start_time" not in st.session_state:
+    st.session_state.start_time = None
+if "elapsed" not in st.session_state:
+    st.session_state.elapsed = 0
 
-# --- MODAL POPUP FOR ZONE SELECTION ---
+# --- CHECK IF ZONE SELECTION IS PENDING ---
 if st.session_state.pending_action:
     player, action, act_time = st.session_state.pending_action
     
-    # Create modal overlay
-    st.markdown('<div class="modal-overlay"></div>', unsafe_allow_html=True)
+    # Show prominent alert at the top
+    st.markdown(f"""
+        <div class="zone-alert">
+            ⚠️ ZONE SELECTION REQUIRED ⚠️<br>
+            Player {player} | {action} | {act_time}
+        </div>
+    """, unsafe_allow_html=True)
     
-    # Modal dialog using container
-    modal_container = st.container()
-    with modal_container:
-        st.markdown('<div class="modal-content">', unsafe_allow_html=True)
-        st.markdown(f'<div class="modal-header">🏀 SELECT SHOT ZONE</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="modal-subheader">Player {player} | {action} | {act_time}</div>', unsafe_allow_html=True)
-        
-        if action in ["2PT", "Miss2"]:
-            st.markdown("#### 2-Point Zones")
-            zone_cols = st.columns(3)
-            for i, z in enumerate(zones_2pt):
-                if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}", use_container_width=True):
-                    st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
-                    st.session_state.pending_action = None
-                    st.rerun()
+    st.error("🚨 You must select a shot zone before continuing!")
+    
+    # Show zone selection prominently
+    if action in ["2PT", "Miss2"]:
+        st.title("📍 SELECT 2-POINT ZONE:")
+        cols = st.columns(3)
+        for i, z in enumerate(zones_2pt):
+            if cols[i % 3].button(f"✓ {z}", key=f"zone-{player}-{action}-{z}", use_container_width=True):
+                st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
+                st.session_state.pending_action = None
+                st.rerun()
 
-        elif action in ["3PT", "Miss3"]:
-            st.markdown("#### 3-Point Zones")
-            zone_cols = st.columns(3)
-            for i, z in enumerate(zones_3pt):
-                if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}", use_container_width=True):
-                    st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
-                    st.session_state.pending_action = None
-                    st.rerun()
-        
-        st.markdown("---")
-        if st.button("❌ Cancel", use_container_width=True):
-            st.session_state.pending_action = None
-            st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+    elif action in ["3PT", "Miss3"]:
+        st.title("📍 SELECT 3-POINT ZONE:")
+        cols = st.columns(3)
+        for i, z in enumerate(zones_3pt):
+            if cols[i % 3].button(f"✓ {z}", key=f"zone-{player}-{action}-{z}", use_container_width=True):
+                st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
+                st.session_state.pending_action = None
+                st.rerun()
     
-    # Stop rendering the rest of the page when modal is active
+    st.markdown("---")
+    col_cancel = st.columns([1, 2, 1])
+    if col_cancel[1].button("❌ CANCEL (No Zone Selected)", use_container_width=True, type="secondary"):
+        st.session_state.pending_action = None
+        st.rerun()
+    
+    # Stop rendering the rest of the page
     st.stop()
 
 # --- Bench UI ---
@@ -195,12 +178,6 @@ if col_q3.button("🔄 Reset Game"):
 
 # --- Clock ---
 st.title('Clock')
-if "clock_running" not in st.session_state:
-    st.session_state.clock_running = False
-if "start_time" not in st.session_state:
-    st.session_state.start_time = None
-if "elapsed" not in st.session_state:
-    st.session_state.elapsed = 0
 
 # auto refresh clock
 st_autorefresh(interval=1000, key="clock_refresh")
@@ -254,7 +231,7 @@ for player in st.session_state.starters:
                     st.rerun()
                 else:
                     if b in ["2PT", "3PT", "Miss2", "Miss3"]:
-                        # Trigger modal for zone selection
+                        # Trigger zone selection
                         st.session_state.pending_action = (player, b, current_game_time)
                         st.rerun()
                     elif b in ["FT", "MissFT"]:

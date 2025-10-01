@@ -96,7 +96,7 @@ if st.session_state.pending_action:
     player, action, act_time = st.session_state.pending_action
     
     # Show prominent alert at the top
-    st.image("my_picture.png", caption="Local Image", use_column_width=True)
+    st.image("shot_chart.png", caption="Local Image", use_column_width=True)
     st.stop()
 
 # --- Bench UI ---

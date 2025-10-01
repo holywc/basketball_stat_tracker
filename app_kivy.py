@@ -97,7 +97,7 @@ if st.session_state.pending_action:
     player, action, act_time = st.session_state.pending_action
 
     # Three columns: left - center - right
-    col1, col2, col3 = st.columns([1,8,1])
+    col1, col2, col3 = st.columns([1,15,1])
     with col2:
         st.image("shot_chart.png", caption="Shot Chart", width=1700)
 

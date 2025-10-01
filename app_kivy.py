@@ -39,11 +39,7 @@ st.markdown("""
         height: 70px !important;
         width: 100% !important;
     }
-    .stImage img {
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-    }
+    
     </style>
     """, unsafe_allow_html=True)
 
@@ -99,10 +95,14 @@ if "elapsed" not in st.session_state:
 # --- CHECK IF ZONE SELECTION IS PENDING ---
 if st.session_state.pending_action:
     player, action, act_time = st.session_state.pending_action
-    
-    # Show prominent alert at the top
-    st.image("shot_chart.png", caption="Local Image", width=1800)
+
+    # Three columns: left - center - right
+    col1, col2, col3 = st.columns([1,3,1])
+    with col2:
+        st.image("shot_chart.png", caption="Shot Chart", use_column_width=True)
+
     st.stop()
+
 
 # --- Bench UI ---
 st.title('Bench')

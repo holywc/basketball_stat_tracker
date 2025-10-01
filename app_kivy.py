@@ -182,23 +182,31 @@ for player in st.session_state.starters:
 if st.session_state.pending_action:
     player, action, act_time = st.session_state.pending_action
 
-    if action in ["2PT", "Miss2"]:
-        st.markdown(f"### Select Zone for **{action} (Player {player})**")
-        zone_cols = st.columns(3)
-        for i, z in enumerate(zones_2pt):
-            if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}"):
-                st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
-                st.session_state.pending_action = None
-                st.rerun()
+    with st.modal("📍 Select Shot Zone", key="zone-modal"):
+        st.markdown(f"### Player {player} | {action} | {act_time}")
 
-    elif action in ["3PT", "Miss3"]:
-        st.markdown(f"### Select Zone for **{action} (Player {player})**")
-        zone_cols = st.columns(3)
-        for i, z in enumerate(zones_3pt):
-            if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}"):
-                st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
-                st.session_state.pending_action = None
-                st.rerun()
+        if action in ["2PT", "Miss2"]:
+            zone_cols = st.columns(3)
+            for i, z in enumerate(zones_2pt):
+                if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}"):
+                    st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
+                    st.session_state.pending_action = None
+                    st.rerun()
+
+        elif action in ["3PT", "Miss3"]:
+            zone_cols = st.columns(3)
+            for i, z in enumerate(zones_3pt):
+                if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}"):
+                    st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
+                    st.session_state.pending_action = None
+                    st.rerun()
+
+        elif action in ["FT", "MissFT"]:
+            # Free throws don’t need a zone
+            st.session_state.stats.append([player, action, act_time, f"Q{st.session_state.quarter}"])
+            st.session_state.pending_action = None
+            st.rerun()
+
 
 # --- Undo ---
 if st.session_state.stats:

@@ -178,11 +178,26 @@ for player in st.session_state.starters:
                         st.rerun()
 
 
-# --- Zone selection if pending action ---
+# --- Zone selection with st.dialog ---
+if "show_zone_modal" not in st.session_state:
+    st.session_state.show_zone_modal = False
+if "zone_info" not in st.session_state:
+    st.session_state.zone_info = None  # (player, action, time)
+
+# When a pending action needs a zone, open modal
 if st.session_state.pending_action:
     player, action, act_time = st.session_state.pending_action
 
-    with st.modal("📍 Select Shot Zone", key="zone-modal"):
+    # Only show modal once
+    if not st.session_state.show_zone_modal:
+        st.session_state.show_zone_modal = True
+        st.session_state.zone_info = (player, action, act_time)
+
+# If modal is open
+if st.session_state.show_zone_modal and st.session_state.zone_info:
+    player, action, act_time = st.session_state.zone_info
+
+    with st.dialog("📍 Select Shot Zone"):
         st.markdown(f"### Player {player} | {action} | {act_time}")
 
         if action in ["2PT", "Miss2"]:
@@ -191,6 +206,7 @@ if st.session_state.pending_action:
                 if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}"):
                     st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
                     st.session_state.pending_action = None
+                    st.session_state.show_zone_modal = False
                     st.rerun()
 
         elif action in ["3PT", "Miss3"]:
@@ -199,12 +215,13 @@ if st.session_state.pending_action:
                 if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}"):
                     st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
                     st.session_state.pending_action = None
+                    st.session_state.show_zone_modal = False
                     st.rerun()
 
         elif action in ["FT", "MissFT"]:
-            # Free throws don’t need a zone
             st.session_state.stats.append([player, action, act_time, f"Q{st.session_state.quarter}"])
             st.session_state.pending_action = None
+            st.session_state.show_zone_modal = False
             st.rerun()
 
 

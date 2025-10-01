@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import time
 from streamlit_autorefresh import st_autorefresh
 
@@ -15,7 +14,7 @@ st.markdown("""
     div.stButton > button {
         font-size: 22px !important;
         height: 80px !important;
-        width: 120px !important;  /* fixed width so many fit in a row */
+        width: 120px !important;
         margin: 5px !important;
     }
     </style>
@@ -31,14 +30,18 @@ buttons = [
     'BLK', 'Foul', 'STL', 'SUB'
 ]
 
-zones = [
+# --- Zone categories ---
+zones_2pt = [
     "Restricted Area",
     "In the Paint (Non-RA)",
     "Left Short Mid-Range",
     "Right Short Mid-Range",
     "Left Long Mid-Range",
     "Right Long Mid-Range",
-    "Top of the Key Mid-Range",
+    "Top of the Key Mid-Range"
+]
+
+zones_3pt = [
     "Left Corner 3",
     "Right Corner 3",
     "Left Wing 3",
@@ -50,22 +53,58 @@ zones = [
 if "starters" not in st.session_state:
     st.session_state.starters = []
 if "players" not in st.session_state:
-    st.session_state.players = [9, 93, 5, 24, 22, 55]
+    st.session_state.players = [23,33,24,75,11,5,84,44,8,31,17]
 if "stats" not in st.session_state:
     st.session_state.stats = []
 if "pending_action" not in st.session_state:
     st.session_state.pending_action = None  # (player, action, time)
+if "quarter" not in st.session_state:
+    st.session_state.quarter = 1
+if "max_quarters" not in st.session_state:
+    st.session_state.max_quarters = 4
 
 # --- Bench UI ---
 st.title('Bench')
-cols = st.columns(len(st.session_state.players))
-for i, p in enumerate(st.session_state.players):
-    if cols[i].button(str(p), key=f"player-{p}"):
-        if len(st.session_state.starters) < 5:
-            st.session_state.starters.append(p)
-            st.session_state.players.remove(p)
-            st.session_state.stats.append([p, "SUB_IN", "0:00"])
-            st.rerun()
+if st.session_state.players:
+    cols = st.columns(len(st.session_state.players))
+    for i, p in enumerate(st.session_state.players):
+        if cols[i].button(str(p), key=f"player-{p}"):
+            if len(st.session_state.starters) < 5:
+                st.session_state.starters.append(p)
+                st.session_state.players.remove(p)
+                st.session_state.stats.append([p, "SUB_IN", "0:00", f"Q{st.session_state.quarter}"])
+                st.rerun()
+
+# --- Quarter Logic ---
+st.title("📅 Game Quarter")
+
+col_q1, col_q2, col_q3 = st.columns(3)
+
+# show current quarter
+col_q1.markdown(f"## 🏀 Quarter {st.session_state.quarter}")
+
+# next quarter button
+if col_q2.button("➡️ Next Quarter"):
+    if st.session_state.quarter < st.session_state.max_quarters:
+        st.session_state.quarter += 1
+    else:
+        # after 4 quarters, add OT
+        st.session_state.quarter += 1
+        st.session_state.max_quarters = st.session_state.quarter  # allow unlimited OTs
+    st.rerun()
+
+# reset game button
+if col_q3.button("🔄 Reset Game"):
+    st.session_state.quarter = 1
+    st.session_state.max_quarters = 4
+    st.session_state.stats = []
+    st.session_state.starters = []
+    st.session_state.players = [23,33,24,75,11,5,84,44,8,31,17]
+    st.session_state.clock_running = False
+    st.session_state.elapsed = 0
+    st.session_state.start_time = None
+    st.session_state.pending_action = None
+    st.rerun()
 
 # --- Clock ---
 st.title('Clock')
@@ -108,35 +147,58 @@ st.markdown(f"# ⏱ {minutes}:{seconds:02d}")
 # --- Stat Tracker ---
 st.title("🏀 Basketball Stat Tracker")
 
+BUTTONS_PER_ROW = 5  # adjust this for iPad friendliness
+
 for player in st.session_state.starters:
-    cols = st.columns(len(buttons) + 1)
-    cols[0].markdown(f"**Player {player}**")
+    st.markdown(f"### Player {player}")
 
-    for i, b in enumerate(buttons):
-        if cols[i + 1].button(b, key=f"{player}-{b}"):
+    # break the buttons into rows
+    for row_start in range(0, len(buttons), BUTTONS_PER_ROW):
+        row_buttons = buttons[row_start:row_start+BUTTONS_PER_ROW]
+        cols = st.columns(len(row_buttons))
 
-            if b == "SUB":
-                st.session_state.players.append(player)
-                st.session_state.starters.remove(player)
-                st.session_state.stats.append([player, "SUB_OUT", current_game_time])
-                st.rerun()
-            else:
-                # wait for zone selection
-                st.session_state.pending_action = (player, b, current_game_time)
-                st.info(f"Select zone for {b} by Player {player}")
+        for i, b in enumerate(row_buttons):
+            if cols[i].button(b, key=f"{player}-{b}"):
+
+                if b == "SUB":
+                    st.session_state.players.append(player)
+                    st.session_state.starters.remove(player)
+                    st.session_state.stats.append([player, "SUB_OUT", current_game_time, f"Q{st.session_state.quarter}"])
+                    st.rerun()
+                else:
+                    if b in ["2PT", "3PT", "FT", "Miss2", "Miss3", "MissFT"]:
+                        st.session_state.pending_action = (player, b, current_game_time)
+                        st.info(f"Select zone for {b} by Player {player}" if b not in ["FT", "MissFT"] else f"Logged Free Throw for Player {player}")
+                        if b in ["FT", "MissFT"]:
+                            st.session_state.stats.append([player, b, current_game_time, f"Q{st.session_state.quarter}"])
+                            st.session_state.pending_action = None
+                            st.rerun()
+                    else:
+                        st.session_state.stats.append([player, b, current_game_time, f"Q{st.session_state.quarter}"])
+                        st.rerun()
+
 
 # --- Zone selection if pending action ---
 if st.session_state.pending_action:
     player, action, act_time = st.session_state.pending_action
-    st.markdown(f"### Select Zone for **{action} (Player {player})**")
-    zone_cols = st.columns(4)
 
-    for i, z in enumerate(zones):
-        if zone_cols[i % 4].button(z, key=f"zone-{player}-{action}-{z}"):
-            # merge action + zone
-            st.session_state.stats.append([player, f"{action} - {z}", act_time])
-            st.session_state.pending_action = None
-            st.rerun()
+    if action in ["2PT", "Miss2"]:
+        st.markdown(f"### Select Zone for **{action} (Player {player})**")
+        zone_cols = st.columns(3)
+        for i, z in enumerate(zones_2pt):
+            if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}"):
+                st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
+                st.session_state.pending_action = None
+                st.rerun()
+
+    elif action in ["3PT", "Miss3"]:
+        st.markdown(f"### Select Zone for **{action} (Player {player})**")
+        zone_cols = st.columns(3)
+        for i, z in enumerate(zones_3pt):
+            if zone_cols[i % 3].button(z, key=f"zone-{player}-{action}-{z}"):
+                st.session_state.stats.append([player, f"{action} - {z}", act_time, f"Q{st.session_state.quarter}"])
+                st.session_state.pending_action = None
+                st.rerun()
 
 # --- Undo ---
 if st.session_state.stats:
@@ -144,11 +206,10 @@ if st.session_state.stats:
         st.session_state.stats.pop()
         st.rerun()
 
-
 # --- Stats Table ---
 if st.session_state.stats:
     st.subheader("📊 Logged Stats")
-    df = pd.DataFrame(st.session_state.stats, columns=["Player", "Action", "Time"])
+    df = pd.DataFrame(st.session_state.stats, columns=["Player", "Action", "Time", "Quarter"])
 
     # Detect if user is on mobile (basic user-agent check)
     user_agent = st.request.headers.get("user-agent", "").lower() if hasattr(st, "request") else ""
@@ -166,4 +227,3 @@ if st.session_state.stats:
         file_name="game_stats.csv",
         mime="text/csv",
     )
-
